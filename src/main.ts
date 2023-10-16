@@ -1,3 +1,4 @@
+import 'leaflet/dist/leaflet.css';
 import './app.scss';
 import App from './App.svelte';
 

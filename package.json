@@ -13,6 +13,8 @@
     "@picocss/pico": "^1.5.10",
     "@sveltejs/vite-plugin-svelte": "^2.4.2",
     "@tsconfig/svelte": "^5.0.0",
+    "@types/d3": "^7.4.1",
+    "@types/leaflet": "^1.9.6",
     "prettier": "^3.0.3",
     "prettier-plugin-svelte": "^3.0.3",
     "sass": "^1.68.0",
@@ -21,5 +23,9 @@
     "tslib": "^2.6.0",
     "typescript": "^5.0.2",
     "vite": "^4.4.5"
+  },
+  "dependencies": {
+    "d3": "^7.8.5",
+    "leaflet": "^1.9.4"
   }
 }
