@@ -27,21 +27,41 @@
     svg
       .selectAll('.point')
       .data(data)
-      .join((enter) => {
-        return enter.append('circle').attr('class', 'point');
-      })
-      .attr('r', 5)
-      .attr('fill', 'red')
-      .attr('transform', function (d) {
-        const lat = +d.latitude.replaceAll(',', '.');
-        const lon = +d.longitude.replaceAll(',', '.');
-        let [x, y] = transform(lat, lon);
+      .join(
+        (enter) => {
+          const g = enter.append('g').attr('class', 'point');
 
-        x += rect.x;
-        y += rect.y;
+          g.append('circle').attr('class', 'center');
+          g.append('circle').attr('class', 'radius');
 
-        return `translate(${x}, ${y})`;
-      });
+          return g;
+        },
+        (update) => {
+          update.select('.center').attr('r', 5).attr('fill', 'red');
+          update
+            .select('.radius')
+            .attr('r', (d) => {
+              const lat = +d.latitude.replaceAll(',', '.');
+              const lon = +d.longitude.replaceAll(',', '.');
+              const [_x1, y1] = transform(lat, lon);
+              const [_x2, y2] = transform(lat + 0.009043717330 * 2, lon);
+
+              return Math.abs(y2 - y1);
+            })
+            .attr('fill', '#FF000033');
+
+          return update.attr('transform', (d) => {
+            const lat = +d.latitude.replaceAll(',', '.');
+            const lon = +d.longitude.replaceAll(',', '.');
+            let [x, y] = transform(lat, lon);
+
+            x += rect.x;
+            y += rect.y;
+
+            return `translate(${x}, ${y})`;
+          });
+        },
+      );
   }
 
   onMount(() => {
