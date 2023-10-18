@@ -6,18 +6,20 @@
   const centerLatitude = -22.94;
   const centerLongitude = -43.2;
 
-  let resizeObserver: ResizeObserver;
   let map: L.Map;
   let svg: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>;
   let data: d3.DSVRowString<string>[];
   let hideSvg = false;
+  let mutationObserver: MutationObserver;
 
   function transform(lat: number, lon: number) {
     const point = map.latLngToLayerPoint(new L.LatLng(lat, lon));
     return [point.x, point.y];
   }
 
-  function drawPoints() {
+  function draw() {
+    if (!data) return;
+
     const rect = document
       .querySelector('.leaflet-map-pane')!
       .getBoundingClientRect();
@@ -45,18 +47,27 @@
   onMount(() => {
     map = L.map('map').setView([centerLatitude, centerLongitude], 10);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+    L.tileLayer('http://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
       attribution:
         '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
 
-    map.on('dragstart zoomstart', () => {
+    map.on('zoomstart', () => {
       hideSvg = true;
     });
 
-    map.on('dragend zoomend', () => {
-      drawPoints();
+    map.on('zoomend', () => {
+      draw();
       hideSvg = false;
+    });
+
+    mutationObserver = new MutationObserver(() => {
+      draw();
+    });
+
+    mutationObserver.observe(document.querySelector('.leaflet-map-pane')!, {
+      attributes: true,
+      attributeFilter: ['style'],
     });
 
     svg = d3.select('#map > svg');
@@ -70,11 +81,11 @@
   });
 
   onDestroy(() => {
-    resizeObserver.disconnect();
+    mutationObserver.disconnect();
   });
 
-  $: if (svg && data) {
-    drawPoints();
+  $: if (data && svg) {
+    draw();
     svg.style('visibility', hideSvg ? 'hidden' : 'visible');
   }
 </script>
