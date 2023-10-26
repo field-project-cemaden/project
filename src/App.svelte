@@ -2,13 +2,13 @@
   import * as d3 from 'd3';
   import { onDestroy, onMount } from 'svelte';
   import * as L from 'leaflet';
+  import { data, loadData } from './stores/data';
 
   const centerLatitude = -22.94;
   const centerLongitude = -43.2;
 
   let map: L.Map;
   let svg: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>;
-  let data: d3.DSVRowString<string>[];
   let hideSvg = false;
   let mutationObserver: MutationObserver;
 
@@ -18,7 +18,7 @@
   }
 
   function draw() {
-    if (!data) return;
+    if (!$data.isLoaded) return;
 
     const rect = document
       .querySelector('.leaflet-map-pane')!
@@ -26,7 +26,7 @@
 
     svg
       .selectAll('.point')
-      .data(data)
+      .data($data.accumulated)
       .join(
         (enter) => {
           const g = enter.append('g').attr('class', 'point');
@@ -41,19 +41,15 @@
           update
             .select('.radius')
             .attr('r', (d) => {
-              const lat = +d.latitude.replaceAll(',', '.');
-              const lon = +d.longitude.replaceAll(',', '.');
-              const [_x1, y1] = transform(lat, lon);
-              const [_x2, y2] = transform(lat + 0.009043717330 * 2, lon);
+              const [_x1, y1] = transform(d.latitude, d.longitude);
+              const [_x2, y2] = transform(d.latitude + 0.00904371733 * 2, d.longitude);
 
               return Math.abs(y2 - y1);
             })
             .attr('fill', '#FF000033');
 
           return update.attr('transform', (d) => {
-            const lat = +d.latitude.replaceAll(',', '.');
-            const lon = +d.longitude.replaceAll(',', '.');
-            let [x, y] = transform(lat, lon);
+            let [x, y] = transform(d.latitude, d.longitude);
 
             x += rect.x;
             y += rect.y;
@@ -92,19 +88,14 @@
 
     svg = d3.select('#map > svg');
 
-    d3.dsv(';', 'data.csv').then(
-      (csv) =>
-        (data = Array.from(d3.group(csv, (d) => d.codEstacao).values()).map(
-          (g) => g[0],
-        )),
-    );
+    loadData();
   });
 
   onDestroy(() => {
     mutationObserver.disconnect();
   });
 
-  $: if (data && svg) {
+  $: if ($data.isLoaded && svg) {
     draw();
     svg.style('visibility', hideSvg ? 'hidden' : 'visible');
   }
