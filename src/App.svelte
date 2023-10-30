@@ -6,6 +6,7 @@
 
   const centerLatitude = -22.94;
   const centerLongitude = -43.2;
+  const degreeToKm = 0.00904371733;
 
   let map: L.Map;
   let svg: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>;
@@ -25,6 +26,22 @@
       .getBoundingClientRect();
 
     svg
+      .selectAll('.graph-line')
+      .data(
+        $data.streetGraph
+          .filter(d => -22.95 > d.start[0] && -43.2 < d.start[1])
+          .map((d) => [transform(...d.start), transform(...d.end)]),
+      )
+      .join('line')
+      .attr('class', 'graph-line')
+      .attr('x1', (d) => d[0][0] + rect.x)
+      .attr('y1', (d) => d[0][1] + rect.y)
+      .attr('x2', (d) => d[1][0] + rect.x)
+      .attr('y2', (d) => d[1][1] + rect.y)
+      .attr('stroke', 'green')
+      .attr('stroke-width', 2)
+
+    svg
       .selectAll('.point')
       .data($data.accumulated)
       .join(
@@ -42,7 +59,10 @@
             .select('.radius')
             .attr('r', (d) => {
               const [_x1, y1] = transform(d.latitude, d.longitude);
-              const [_x2, y2] = transform(d.latitude + 0.00904371733 * 2, d.longitude);
+              const [_x2, y2] = transform(
+                d.latitude + degreeToKm * 2,
+                d.longitude,
+              );
 
               return Math.abs(y2 - y1);
             })
