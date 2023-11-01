@@ -1,84 +1,17 @@
 <script lang="ts">
-  import * as d3 from 'd3';
   import { onDestroy, onMount } from 'svelte';
   import * as L from 'leaflet';
   import { data, loadData } from './stores/data';
+  import IDWLayer from './components/idw-layer/index.svelte';
 
   const centerLatitude = -22.94;
   const centerLongitude = -43.2;
-  const degreeToKm = 0.00904371733;
 
   let map: L.Map;
-  let svg: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>;
-  let hideSvg = false;
   let mutationObserver: MutationObserver;
-
-  function transform(lat: number, lon: number) {
-    const point = map.latLngToLayerPoint(new L.LatLng(lat, lon));
-    return [point.x, point.y];
-  }
-
-  function draw() {
-    if (!$data.isLoaded) return;
-
-    const rect = document
-      .querySelector('.leaflet-map-pane')!
-      .getBoundingClientRect();
-
-    svg
-      .selectAll('.graph-line')
-      .data(
-        $data.streetGraph
-          .filter(d => -22.95 > d.start[0] && -43.2 < d.start[1])
-          .map((d) => [transform(...d.start), transform(...d.end)]),
-      )
-      .join('line')
-      .attr('class', 'graph-line')
-      .attr('x1', (d) => d[0][0] + rect.x)
-      .attr('y1', (d) => d[0][1] + rect.y)
-      .attr('x2', (d) => d[1][0] + rect.x)
-      .attr('y2', (d) => d[1][1] + rect.y)
-      .attr('stroke', 'green')
-      .attr('stroke-width', 2)
-
-    svg
-      .selectAll('.point')
-      .data($data.accumulated)
-      .join(
-        (enter) => {
-          const g = enter.append('g').attr('class', 'point');
-
-          g.append('circle').attr('class', 'center');
-          g.append('circle').attr('class', 'radius');
-
-          return g;
-        },
-        (update) => {
-          update.select('.center').attr('r', 5).attr('fill', 'red');
-          update
-            .select('.radius')
-            .attr('r', (d) => {
-              const [_x1, y1] = transform(d.latitude, d.longitude);
-              const [_x2, y2] = transform(
-                d.latitude + degreeToKm * 2,
-                d.longitude,
-              );
-
-              return Math.abs(y2 - y1);
-            })
-            .attr('fill', '#FF000033');
-
-          return update.attr('transform', (d) => {
-            let [x, y] = transform(d.latitude, d.longitude);
-
-            x += rect.x;
-            y += rect.y;
-
-            return `translate(${x}, ${y})`;
-          });
-        },
-      );
-  }
+  let onZoom: () => {};
+  let onMove: () => {};
+  let onHide: (hide: boolean) => {};
 
   onMount(() => {
     map = L.map('map').setView([centerLatitude, centerLongitude], 10);
@@ -89,16 +22,16 @@
     }).addTo(map);
 
     map.on('zoomstart', () => {
-      hideSvg = true;
+      onHide(true);
     });
 
     map.on('zoomend', () => {
-      draw();
-      hideSvg = false;
+      onZoom();
+      onHide(false);
     });
 
     mutationObserver = new MutationObserver(() => {
-      draw();
+      onMove();
     });
 
     mutationObserver.observe(document.querySelector('.leaflet-map-pane')!, {
@@ -106,24 +39,22 @@
       attributeFilter: ['style'],
     });
 
-    svg = d3.select('#map > svg');
-
     loadData();
   });
 
   onDestroy(() => {
     mutationObserver.disconnect();
   });
-
-  $: if ($data.isLoaded && svg) {
-    draw();
-    svg.style('visibility', hideSvg ? 'hidden' : 'visible');
-  }
 </script>
 
 <main>
   <div id="map">
-    <svg />
+    <IDWLayer
+      {map}
+      bind:onZoom="{onZoom}"
+      bind:onMove="{onMove}"
+      bind:onHide="{onHide}"
+    />
   </div>
 </main>
 
@@ -136,17 +67,9 @@
     justify-content: center;
 
     #map {
-      background: lightgray;
       width: 100%;
       height: 100%;
       user-select: none;
-
-      svg {
-        width: 100vw;
-        height: 100vh;
-        position: absolute;
-        z-index: 1000;
-      }
     }
   }
 </style>

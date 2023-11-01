@@ -1,6 +1,8 @@
 import { writable } from 'svelte/store';
+import * as d3 from 'd3';
+import type { MultiPolygon } from 'geojson';
 
-type AccumulatedData = Array<{
+export type AccumulatedData = Array<{
   acc120hr: number;
   acc12hr: number;
   acc1hr: number;
@@ -24,12 +26,14 @@ interface DataStore {
   isLoaded: boolean;
   accumulated: AccumulatedData;
   streetGraph: StreetGraphData;
+  boundary: d3.ExtendedFeatureCollection<d3.ExtendedFeature<MultiPolygon>>;
 }
 
 export const data = writable<DataStore>({
   isLoaded: false,
   accumulated: [] as any,
   streetGraph: [] as any,
+  boundary: null as any,
 });
 
 export async function loadData() {
@@ -50,9 +54,13 @@ export async function loadData() {
         })),
     );
 
+  const boundary =
+    await d3.json<d3.ExtendedFeatureCollection>('/boundary.geojson');
+
   data.set({
     isLoaded: true,
     accumulated: accumulated!,
     streetGraph: streetGraph!,
+    boundary: boundary!,
   });
 }
