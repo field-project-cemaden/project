@@ -22,11 +22,12 @@ function distance(lat1: number, lat2: number, lon1: number, lon2: number) {
   return c * r;
 }
 
-export function invDist(
-  lat1: number,
-  long1: number,
-  data: Array<[number, number, number]>,
-) {
+export interface Point {
+  position: [number, number];
+  value: number;
+}
+
+export function invDist([lon1, lat1]: [number, number], points: Point[]) {
   /*
     Returns the prediction for a new point
     using the known data.
@@ -40,12 +41,12 @@ export function invDist(
   let ponderedSum = 0;
   let invDistSum = 0;
 
-  for (const [lat2, long2, value] of data) {
-    // ou of
-    if (lat1 == lat2 && long1 == long2) {
+  for (const { position, value } of points) {
+    const [lon2, lat2] = position;
+    if (lat1 == lat2 && lon1 == lon2) {
       return value;
     }
-    const dist = distance(lat1, lat2, long1, long2);
+    const dist = distance(lat1, lat2, lon1, lon2);
     ponderedSum += (value * 1) / dist;
     invDistSum += 1 / dist;
   }

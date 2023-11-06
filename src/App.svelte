@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import * as L from 'leaflet';
-  import { data, loadData } from './stores/data';
-  import IDWLayer from './components/idw-layer/index.svelte';
+  import { loadData } from './stores/data';
+  import IDWLayer from './components/idw-layer';
 
   const centerLatitude = -22.94;
   const centerLongitude = -43.2;
