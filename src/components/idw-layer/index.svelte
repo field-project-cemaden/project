@@ -1,17 +1,19 @@
 <script lang="ts">
 import { data } from '@/stores/data';
 import * as d3 from 'd3';
-import * as d3hex from 'd3-hexbin';
 import * as L from 'leaflet';
 import * as turf from '@turf/turf';
 import { invDist, type Point } from './functions';
 
-const deltaDegree = 4e-3;
+// const deltaDegree = 6e-3;
 
 export let map: L.Map;
 
 let svgEl: SVGSVGElement;
 $: svg = d3.select(svgEl);
+
+let tooltipEl: Element;
+$: tooltip = d3.select(tooltipEl);
 
 $: accumulatedData = $data.accumulated.map((row) => ({
   position: [row.longitude, row.latitude] as [number, number],
@@ -21,26 +23,27 @@ $: accumulatedData = $data.accumulated.map((row) => ({
 let points: Point[] = [];
 
 $: if ($data.isLoaded) {
-  const multyPolygon = turf.multiPolygon(
-    $data.boundary?.features[0].geometry.coordinates,
-  );
-  const [lon1, lat1, lon2, lat2] = turf.bbox(multyPolygon);
+  // const multyPolygon = turf.multiPolygon(
+  //   $data.boundary?.features[0].geometry.coordinates,
+  // );
 
-  const positions: Array<[number, number]> = [];
+  // const [lon1, lat1, lon2, lat2] = turf.bbox(multyPolygon);
 
-  for (let lat = lat1 + deltaDegree / 2; lat <= lat2; lat += deltaDegree) {
-    for (let lon = lon1 + deltaDegree / 2; lon <= lon2; lon += deltaDegree) {
-      positions.push([lon, lat]);
-    }
-  }
+  // const positions: Array<[number, number]> = [];
 
-  points = turf
-    .pointsWithinPolygon(turf.points(positions), multyPolygon)
-    .features.map((point) => point.geometry.coordinates as [number, number])
-    .map((point) => ({
-      position: point,
-      value: invDist(point, accumulatedData),
-    }));
+  // for (let lat = lat1 + deltaDegree / 2; lat <= lat2; lat += deltaDegree) {
+  //   for (let lon = lon1 + deltaDegree / 2; lon <= lon2; lon += deltaDegree) {
+  //     positions.push([lon, lat]);
+  //   }
+  // }
+
+  // points = turf
+  //   .pointsWithinPolygon(turf.points(positions), multyPolygon)
+  //   .features.map((point) => point.geometry.coordinates as [number, number])
+  //   .map((point) => ({
+  //     position: point,
+  //     value: invDist(point, accumulatedData),
+  //   }));
 }
 
 function transform([lon, lat]: [number, number]): [number, number] {
@@ -49,45 +52,63 @@ function transform([lon, lat]: [number, number]): [number, number] {
 }
 
 function drawHeatMap() {
-  if (points.length < 2) return;
+  // if (points.length < 2) return;
 
-  const transformedPoints = points.map((point) => ({
-    ...point,
-    position: transform(point.position),
-  }));
+  // const transformedPoints = points.map((point) => ({
+  //   ...point,
+  //   position: transform(point.position),
+  // }));
 
   const color = d3
     .scaleQuantize<string>()
     .domain([0, d3.max([...accumulatedData.map((point) => point.value), 1])!])
     .range(d3.schemeBlues[9]);
 
-  const radius =
-    80 *
-    deltaDegree *
-    Math.abs(
-      transformedPoints[1].position[0] - transformedPoints[0].position[0],
-    );
+  const path = d3.geoPath().projection(
+    d3.geoTransform({
+      point: function (lon, lat) {
+        this.stream.point(...transform([lon, lat]));
+      },
+    }),
+  );
 
-  const hexbin = d3hex
-    .hexbin<Point>()
-    .x((d) => d.position[0])
-    .y((d) => d.position[1])
-    .radius(radius);
-
-  console.log(svg.select('g'));
+  // svg
+  //   .select('g')
+  //   .selectAll('circle')
+  //   .data(transformedPoints)
+  //   .join('circle')
+  //   .attr('cx', (d) => d.position[0])
+  //   .attr('cy', (d) => d.position[1])
+  //   .attr('r', 2)
+  //   .attr('fill', 'blue');
 
   svg
     .select('g')
     .selectAll('path')
-    .data(hexbin(transformedPoints))
+    .data($data.regions.features)
     .join('path')
-    .attr('transform', (d) => `translate(${d.x},${d.y})`)
-    .attr('d', hexbin.hexagon())
+    .attr('d', path)
     .attr('fill', (d) => {
-      const mean = d.reduce((acc, point) => acc + point.value, 0) / d.length;
-      return color(mean);
+      let coords = d.geometry.coordinates;
+      coords = typeof coords[0][0][0] === 'number' ? ([coords] as any) : coords;
+      const multiPolygon = turf.multiPolygon(coords);
+      const center = turf.center(multiPolygon).geometry.coordinates;
+      return color(invDist(center as [number, number], accumulatedData));
     })
-    .attr('opacity', 0.7);
+    .attr('stroke', 'white')
+    .attr('stroke-width', 1)
+    .attr('opacity', 0.75)
+    .on('mouseenter', (_, d) => {
+      tooltip.classed('open', true).text(d.properties?.nomera);
+    })
+    .on('mousemove', (e) => {
+      tooltip
+        .style('left', `${e.clientX + 10}px`)
+        .style('top', `${e.clientY + 10}px`);
+    })
+    .on('mouseleave', () => {
+      tooltip.classed('open', false);
+    });
 }
 
 function translateG() {
@@ -122,11 +143,35 @@ $: if ($data.isLoaded && svg) {
   <g></g>
 </svg>
 
+<div class="tooltip" bind:this={tooltipEl}></div>
+
 <style lang="scss">
 svg {
   width: 100vw;
   height: 100vh;
   position: absolute;
   z-index: 1000;
+}
+
+.tooltip {
+  position: absolute;
+  visibility: hidden;
+
+  opacity: 0;
+  background: white;
+  border-radius: var(--border-radius);
+  font-weight: bold;
+
+  width: 10rem;
+  height: 4rem;
+  padding: 0.5rem;
+
+  transition: opacity var(--transition);
+  z-index: 10000;
+
+  &:global(.open) {
+    opacity: 1;
+    visibility: visible;
+  }
 }
 </style>

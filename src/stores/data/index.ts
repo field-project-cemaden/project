@@ -22,11 +22,14 @@ type StreetGraphData = Array<{
   end: [number, number];
 }>;
 
+type GeoJSON = d3.ExtendedFeatureCollection<d3.ExtendedFeature<MultiPolygon>>;
+
 interface DataStore {
   isLoaded: boolean;
   accumulated: AccumulatedData;
   streetGraph: StreetGraphData;
-  boundary: d3.ExtendedFeatureCollection<d3.ExtendedFeature<MultiPolygon>>;
+  boundary: GeoJSON;
+  regions: GeoJSON;
 }
 
 export const data = writable<DataStore>({
@@ -34,6 +37,7 @@ export const data = writable<DataStore>({
   accumulated: [] as any,
   streetGraph: [] as any,
   boundary: null as any,
+  regions: null as any,
 });
 
 export async function loadData() {
@@ -54,13 +58,15 @@ export async function loadData() {
         })),
     );
 
-  const boundary =
-    await d3.json<d3.ExtendedFeatureCollection>('/boundary.geojson');
+  const boundary = await d3.json<GeoJSON>('/boundary.geojson');
+
+  const regions = await d3.json<GeoJSON>('/regions.geojson');
 
   data.set({
     isLoaded: true,
     accumulated: accumulated!,
     streetGraph: streetGraph!,
     boundary: boundary!,
+    regions: regions!,
   });
 }
