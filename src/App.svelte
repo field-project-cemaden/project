@@ -1,30 +1,38 @@
 <script lang="ts">
 import { onDestroy, onMount } from 'svelte';
 import * as L from 'leaflet';
-import { loadData } from './stores/data';
+
+import { loadData } from '@/stores/data';
+
+import {
+  viz,
+  selectLayer,
+  selectShape,
+  selectInterval,
+  intervals,
+  Layer,
+  Shape,
+} from '@/stores/viz';
+
 import IDWLayer from './components/idw-layer';
+
 import {
   AddOutline,
   RemoveOutline,
+  CheckmarkCircleOutline,
   LayersOutline,
-  MapOutline,
+  ShapesOutline,
+  TimeOutline,
 } from 'svelte-ionicons';
 
 const centerLatitude = -22.94;
 const centerLongitude = -43.2;
-
-enum Layer {
-  idw = 'Inverse distance weighting (IDW)',
-  gp = 'Gaussian process (GP)',
-}
 
 let map: L.Map;
 let mutationObserver: MutationObserver;
 let onZoom = () => {};
 let onMove = () => {};
 let onHide = (_hide: boolean) => {};
-
-let currentLayer = Layer.idw;
 
 onMount(() => {
   map = L.map('map').setView([centerLatitude, centerLongitude], 10);
@@ -70,7 +78,7 @@ function onZoomOut() {
 
 <main>
   <div id="map">
-    {#if currentLayer == Layer.idw}
+    {#if $viz.selectedLayer == Layer.idw}
       <IDWLayer {map} bind:onZoom bind:onMove bind:onHide />
     {/if}
 
@@ -85,18 +93,52 @@ function onZoomOut() {
       </div>
 
       <div class="button-group">
-        <button id="layers-button">
+        <button class="selection-button">
           <LayersOutline />
 
-          <ul id="layer-list">
+          <ul class="selection-list">
             {#each Object.values(Layer) as layer}
               <li
-                class:selected={currentLayer == layer}
-                on:click={() => (currentLayer = layer)}
+                class:selected={$viz.selectedLayer == layer}
+                on:click={() => selectLayer(layer)}
                 role="presentation"
               >
-                <MapOutline />
+                <CheckmarkCircleOutline />
                 <span>{layer}</span>
+              </li>
+            {/each}
+          </ul>
+        </button>
+
+        <button class="selection-button">
+          <ShapesOutline />
+
+          <ul class="selection-list">
+            {#each Object.values(Shape) as shape}
+              <li
+                class:selected={$viz.selectedShape == shape}
+                on:click={() => selectShape(shape)}
+                role="presentation"
+              >
+                <CheckmarkCircleOutline />
+                <span>{shape}</span>
+              </li>
+            {/each}
+          </ul>
+        </button>
+
+        <button class="selection-button">
+          <TimeOutline />
+
+          <ul class="selection-list">
+            {#each intervals as interval}
+              <li
+                class:selected={$viz.selectedInterval == interval}
+                on:click={() => selectInterval(interval)}
+                role="presentation"
+              >
+                <CheckmarkCircleOutline />
+                <span>Acumulado de {interval} horas</span>
               </li>
             {/each}
           </ul>
@@ -166,7 +208,7 @@ main {
           color: white;
         }
 
-        &#layers-button {
+        &.selection-button {
           position: relative;
 
           &::after {
@@ -177,7 +219,7 @@ main {
             position: absolute;
           }
 
-          #layer-list {
+          .selection-list {
             visibility: hidden;
             border-radius: var(--border-radius);
 
@@ -231,7 +273,7 @@ main {
           }
 
           &:hover {
-            #layer-list {
+            .selection-list {
               opacity: 1;
               visibility: visible;
             }

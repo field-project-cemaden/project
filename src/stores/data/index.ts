@@ -30,6 +30,7 @@ interface DataStore {
   streetGraph: StreetGraphData;
   boundary: GeoJSON;
   regions: GeoJSON;
+  neighborhoods: GeoJSON;
 }
 
 export const data = writable<DataStore>({
@@ -38,6 +39,7 @@ export const data = writable<DataStore>({
   streetGraph: [] as any,
   boundary: null as any,
   regions: null as any,
+  neighborhoods: null as any,
 });
 
 export async function loadData() {
@@ -59,8 +61,8 @@ export async function loadData() {
     );
 
   const boundary = await d3.json<GeoJSON>('/boundary.geojson');
-
   const regions = await d3.json<GeoJSON>('/regions.geojson');
+  const neighborhoods = await d3.json<GeoJSON>('/neighborhoods.geojson');
 
   data.set({
     isLoaded: true,
@@ -68,5 +70,6 @@ export async function loadData() {
     streetGraph: streetGraph!,
     boundary: boundary!,
     regions: regions!,
+    neighborhoods: neighborhoods!,
   });
 }
