@@ -4,7 +4,6 @@ import { defineConfig } from 'vite';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/final-project-voyagers-journey' : '',
   plugins: [svelte()],
   resolve: {
     alias: [
