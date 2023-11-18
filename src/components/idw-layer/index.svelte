@@ -7,9 +7,8 @@ import * as turf from '@turf/turf';
 import { invDist } from './functions';
 import type { MultiPolygon } from 'geojson';
 
-// const deltaDegree = 6e-3;
-
 export let map: L.Map;
+export let colorScale: d3.ScaleThreshold<number, string>;
 
 let svgEl: SVGSVGElement;
 $: svg = d3.select(svgEl);
@@ -51,46 +50,12 @@ $: if ($data.isLoaded) {
   });
 }
 
-// let points: Point[] = [];
-
-$: if ($data.isLoaded) {
-  // const multyPolygon = turf.multiPolygon(
-  //   $data.boundary?.features[0].geometry.coordinates,
-  // );
-  // const [lon1, lat1, lon2, lat2] = turf.bbox(multyPolygon);
-  // const positions: Array<[number, number]> = [];
-  // for (let lat = lat1 + deltaDegree / 2; lat <= lat2; lat += deltaDegree) {
-  //   for (let lon = lon1 + deltaDegree / 2; lon <= lon2; lon += deltaDegree) {
-  //     positions.push([lon, lat]);
-  //   }
-  // }
-  // points = turf
-  //   .pointsWithinPolygon(turf.points(positions), multyPolygon)
-  //   .features.map((point) => point.geometry.coordinates as [number, number])
-  //   .map((point) => ({
-  //     position: point,
-  //     value: invDist(point, accumulatedData),
-  //   }));
-}
-
 function transform([lon, lat]: [number, number]): [number, number] {
   const point = map.latLngToLayerPoint(new L.LatLng(lat, lon));
   return [point.x, point.y];
 }
 
 function drawHeatMap() {
-  // if (points.length < 2) return;
-
-  // const transformedPoints = points.map((point) => ({
-  //   ...point,
-  //   position: transform(point.position),
-  // }));
-
-  const color = d3
-    .scaleQuantize<string>()
-    .domain([0, d3.max([...accumulatedData.map((point) => point.value), 1])!])
-    .range(d3.schemeBlues[9]);
-
   const path = d3.geoPath().projection(
     d3.geoTransform({
       point: function (lon, lat) {
@@ -99,26 +64,16 @@ function drawHeatMap() {
     }),
   );
 
-  // svg
-  //   .select('g')
-  //   .selectAll('circle')
-  //   .data(transformedPoints)
-  //   .join('circle')
-  //   .attr('cx', (d) => d.position[0])
-  //   .attr('cy', (d) => d.position[1])
-  //   .attr('r', 2)
-  //   .attr('fill', 'blue');
-
   svg
     .select('g')
     .selectAll('path')
     .data(shapeData)
     .join('path')
     .attr('d', (region) => path(region.features))
-    .attr('fill', (region) => color(region.value))
-    .attr('stroke', 'gray')
+    .attr('fill', (region) => colorScale(region.value))
+    .attr('stroke', 'white')
     .attr('stroke-width', 1)
-    .attr('opacity', 0.75)
+    .attr('opacity', 0.5)
     .on('mouseenter', (_, region) => {
       tooltip.classed('open', true);
 
@@ -126,7 +81,13 @@ function drawHeatMap() {
       const name = properties?.nomera ?? properties?.nome;
 
       tooltip.select('.region-name').text(name);
-      tooltip.select('.region-value').text(`${region.value.toFixed(3)} mm`);
+      tooltip
+        .select('.region-value')
+        .text(
+          `${Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(
+            region.value,
+          )} mm`,
+        );
     })
     .on('mousemove', (e) => {
       tooltip

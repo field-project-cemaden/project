@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onDestroy, onMount } from 'svelte';
+import * as d3 from 'd3';
 import * as L from 'leaflet';
 
 import { loadData } from '@/stores/data';
@@ -15,6 +16,7 @@ import {
 } from '@/stores/viz';
 
 import IDWLayer from './components/idw-layer';
+import About from './components/about';
 
 import {
   AddOutline,
@@ -23,6 +25,7 @@ import {
   LayersOutline,
   ShapesOutline,
   TimeOutline,
+  InformationOutline,
 } from 'svelte-ionicons';
 
 const centerLatitude = -22.94;
@@ -34,13 +37,23 @@ let onZoom = () => {};
 let onMove = () => {};
 let onHide = (_hide: boolean) => {};
 
+let aboutOpen = false;
+
+const colors = ['#d6ccc2', '#2a9d8f', '#e9c46a', '#e76f51'];
+let colorScale = d3.scaleThreshold<number, string>([10, 30, 70], colors);
+
 onMount(() => {
-  map = L.map('map').setView([centerLatitude, centerLongitude], 10);
+  map = L.map('map', { zoomControl: false }).setView(
+    [centerLatitude, centerLongitude],
+    10,
+  );
 
   L.tileLayer('http://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
     attribution:
       '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
+
+  L.control.scale({ imperial: false }).addTo(map);
 
   map.on('zoomstart', () => {
     onHide(true);
@@ -79,8 +92,28 @@ function onZoomOut() {
 <main>
   <div id="map">
     {#if $viz.selectedLayer == Layer.idw}
-      <IDWLayer {map} bind:onZoom bind:onMove bind:onHide />
+      <IDWLayer {map} {colorScale} bind:onZoom bind:onMove bind:onHide />
     {/if}
+
+    <div id="legend">
+      <p>Precipitação<br />acumulada</p>
+      <div class="legend-info">
+        <div class="legend-info-color" style="background-color: {colors[0]}" />
+        <p class="legend-info-name">0 - 10 mm</p>
+      </div>
+      <div class="legend-info">
+        <div class="legend-info-color" style="background-color: {colors[1]}" />
+        <p class="legend-info-name">10 - 30 mm</p>
+      </div>
+      <div class="legend-info">
+        <div class="legend-info-color" style="background-color: {colors[2]}" />
+        <p class="legend-info-name">30 - 70 mm</p>
+      </div>
+      <div class="legend-info">
+        <div class="legend-info-color" style="background-color: {colors[3]}" />
+        <p class="legend-info-name">&ge; 70 mm</p>
+      </div>
+    </div>
 
     <aside>
       <div class="button-group">
@@ -143,9 +176,15 @@ function onZoomOut() {
             {/each}
           </ul>
         </button>
+
+        <button class="selection-button" on:click={() => (aboutOpen = true)}>
+          <InformationOutline />
+        </button>
       </div>
     </aside>
   </div>
+
+  <About bind:open={aboutOpen} />
 </main>
 
 <style lang="scss">
@@ -160,9 +199,44 @@ main {
     width: 100%;
     height: 100%;
     user-select: none;
+  }
 
-    :global(.leaflet-control-container) {
-      visibility: hidden;
+  #legend {
+    position: absolute;
+    z-index: 10000;
+    right: 1rem;
+    bottom: 2rem;
+
+    background-color: white;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+
+    display: flex;
+    flex-direction: column;
+
+    > p {
+      color: black;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+
+    .legend-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.25rem;
+
+      .legend-info-color {
+        width: 1rem;
+        height: 1rem;
+        border-radius: 100%;
+      }
+
+      .legend-info-name {
+        color: black;
+        margin: 0;
+        font-size: 14px;
+      }
     }
   }
 
@@ -209,17 +283,17 @@ main {
         }
 
         &.selection-button {
-          position: relative;
-
-          &::after {
-            content: '';
-            width: 1rem;
-            height: 4rem;
-            left: 3rem;
-            position: absolute;
-          }
-
           .selection-list {
+            &::before {
+              content: '';
+              width: 1rem;
+              height: 4rem;
+              position: absolute;
+              left: -1rem;
+              top: 50%;
+              transform: translate(0, -50%);
+            }
+
             visibility: hidden;
             border-radius: var(--border-radius);
 
@@ -227,8 +301,9 @@ main {
             background: white;
 
             position: absolute;
+            margin-bottom: 0;
             left: 4rem;
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 0.75rem;
 
             transition: opacity var(--transition);
 
@@ -241,32 +316,40 @@ main {
               margin: 0;
               padding-left: 0;
               border-bottom: 1px #28361844 solid;
-
-              font-weight: regular;
               color: #000b;
-              transition: color var(--transition);
 
               &:last-child {
                 border-bottom: 0;
-              }
-
-              :global(svg) {
-                padding: 5px;
-                width: 1.75rem;
-                height: 1.75rem;
-                border-radius: var(--border-radius);
               }
 
               &:hover:not(.selected) {
                 color: black;
               }
 
-              &.selected {
-                color: black;
+              :global(svg) {
+                padding: 0.25em;
+                width: 1.75rem;
+                height: 1.75rem;
+                border-radius: var(--border-radius);
+                flex-shrink: 0;
+              }
 
+              span {
+                font-weight: regular;
+                transition: color var(--transition);
+                margin: 0;
+                text-align: left;
+                height: 1.75rem;
+              }
+
+              &.selected {
                 :global(svg) {
                   color: white;
                   background: #606c38;
+                }
+
+                span {
+                  color: black;
                 }
               }
             }
