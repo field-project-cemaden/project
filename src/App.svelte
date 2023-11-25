@@ -48,10 +48,13 @@ onMount(() => {
     10,
   );
 
-  L.tileLayer('http://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-    attribution:
-      '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  }).addTo(map);
+  L.tileLayer(
+    'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
+    {
+      attribution:
+        '© <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a>, © <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a>, © <a href="https://www.openstreetmap.org/about" target="_blank">OpenStreetMap</a> contributors',
+    },
+  ).addTo(map);
 
   L.control.scale({ imperial: false }).addTo(map);
 
