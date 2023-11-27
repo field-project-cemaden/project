@@ -1,14 +1,15 @@
 <script lang="ts">
-import { data } from '@/stores/data';
-import { viz, Shape } from '@/stores/viz';
 import * as d3 from 'd3';
-import * as L from 'leaflet';
 import * as turf from '@turf/turf';
-import { invDist } from './functions';
 import type { MultiPolygon } from 'geojson';
-import regl from 'regl';
 
-export let map: L.Map;
+import { viz, Shape } from '@/stores/viz';
+import { data } from '@/stores/data';
+import { onEvent } from '@/utils/svelte';
+
+import { invDist } from './functions';
+import { transformCoord } from '@/utils/leaflet';
+
 export let colorScale: d3.ScaleThreshold<number, string>;
 
 let svgEl: SVGSVGElement;
@@ -16,9 +17,6 @@ $: svg = d3.select(svgEl);
 
 let tooltipEl: HTMLElement;
 $: tooltip = d3.select(tooltipEl);
-
-let canvasEl: HTMLCanvasElement;
-$: canvas = d3.select(canvasEl);
 
 $: accumulatedData = $data.accumulated.map((row) => ({
   position: [row.longitude, row.latitude] as [number, number],
@@ -29,18 +27,6 @@ let shapeData = [] as {
   features: d3.ExtendedFeature<MultiPolygon>;
   value: number;
 }[];
-
-$: graphData = $data.streetGraph
-  .filter(
-    (edge) =>
-      !(
-        isNaN(edge.start[0]) ||
-        isNaN(edge.start[1]) ||
-        isNaN(edge.end[0]) ||
-        isNaN(edge.end[1])
-      ),
-  )
-  .map((edge) => [edge.start, edge.end]);
 
 $: if ($data.isLoaded) {
   let shape;
@@ -66,78 +52,11 @@ $: if ($data.isLoaded) {
   });
 }
 
-function transform([lon, lat]: [number, number]): [number, number] {
-  const point = map.latLngToLayerPoint(new L.LatLng(lat, lon));
-  return [point.x, point.y];
-}
-
-let graphGl: regl.Regl;
-let graphPositionBuffer: regl.Buffer;
-let graphOffset = [0, 0];
-let graphDrawFn: regl.DrawCommand;
-
-$: if ($data.isLoaded && map && canvasEl) {
-  canvasEl.width = window.innerWidth;
-  canvasEl.height = window.innerHeight;
-  graphGl = regl(canvasEl);
-
-  const tGraph = graphData.map((edge) =>
-    edge.map((edge) => {
-      const tEdge = transform(edge);
-      return [
-        (2 * tEdge[0]) / canvasEl.width - 1,
-        (2 * tEdge[1]) / canvasEl.height - 1,
-      ];
-    }),
-  );
-
-  graphPositionBuffer = graphGl.buffer({
-    length: graphData.length * 16,
-    type: 'float',
-    usage: 'dynamic',
-  });
-
-  graphDrawFn = graphGl({
-    frag: `
-    precision mediump float;
-    uniform vec4 color;
-    void main() {
-      gl_FragColor = color;
-    }`,
-
-    vert: `
-    precision mediump float;
-    attribute vec2 position;
-    uniform vec2 offset;
-
-    void main() {
-      gl_Position = vec4(position[0] + offset[0], - position[1] - offset[1], 0, 1);
-    }`,
-
-    attributes: {
-      position: graphPositionBuffer,
-    },
-
-    uniforms: {
-      color: [0.1, 0.1, 0.1, 1],
-      offset: graphGl.prop('offset'),
-    },
-
-    primitive: 'lines',
-    count: tGraph.length,
-  });
-}
-
-function drawGraph() {
-  graphGl.clear({ color: [0, 0, 0, 0], depth: 1 });
-  graphDrawFn({ offset: graphOffset });
-}
-
 function drawHeatMap() {
   const path = d3.geoPath().projection(
     d3.geoTransform({
       point: function (lon, lat) {
-        this.stream.point(...transform([lon, lat]));
+        this.stream.point(...transformCoord([lon, lat]));
       },
     }),
   );
@@ -175,50 +94,25 @@ function drawHeatMap() {
     .on('mouseleave', () => {
       tooltip.classed('open', false);
     });
-
-  const tGraph = graphData.map((edge) =>
-    edge.map((edge) => {
-      const tEdge = transform(edge);
-      return [
-        (2 * tEdge[0]) / canvasEl.width - 1,
-        (2 * tEdge[1]) / canvasEl.height - 1,
-      ];
-    }),
-  );
-
-  graphPositionBuffer.subdata(tGraph);
-  drawGraph();
 }
 
 function translateG() {
-  const container = map.getContainer().querySelector('.leaflet-map-pane')!;
+  const container = $viz
+    .map!.getContainer()
+    .querySelector('.leaflet-map-pane')!;
+
   const rect = container.getBoundingClientRect();
   const translate = [rect.x, rect.y];
 
   svg
     .select('g')
     .attr('transform', `translate(${translate[0]}, ${translate[1]})`);
-
-  graphOffset = [
-    (2 * translate[0]) / canvasEl.width,
-    (2 * translate[1]) / canvasEl.height,
-  ];
-
-  drawGraph();
 }
 
-export function onZoom() {
-  drawHeatMap();
-}
-
-export function onMove() {
-  translateG();
-}
-
-export function onHide(hide: boolean) {
-  svg.style('visibility', hide ? 'hidden' : 'visible');
-  canvas.style('visibility', hide ? 'hidden' : 'visible');
-}
+onEvent('viz-map-zoom', () => drawHeatMap());
+onEvent('viz-map-drag', () => translateG());
+onEvent('viz-map-hide', () => svg.style('visibility', 'hidden'));
+onEvent('viz-map-show', () => svg.style('visibility', 'visible'));
 
 $: if ($data.isLoaded && svg && shapeData) {
   drawHeatMap();
@@ -229,8 +123,6 @@ $: if ($data.isLoaded && svg && shapeData) {
 <svg bind:this={svgEl}>
   <g> </g>
 </svg>
-
-<canvas id="graph" bind:this={canvasEl}></canvas>
 
 <div class="region-tooltip" bind:this={tooltipEl}>
   <p class="region-name"></p>
@@ -243,13 +135,6 @@ svg {
   height: 100vh;
   position: absolute;
   z-index: 2000;
-}
-
-#graph {
-  width: 100vw;
-  height: 100vh;
-  position: absolute;
-  z-index: 1000;
 }
 
 .region-tooltip {

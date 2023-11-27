@@ -1,22 +1,13 @@
 <script lang="ts">
-import { onDestroy, onMount } from 'svelte';
 import * as d3 from 'd3';
 import * as L from 'leaflet';
+import { onDestroy, onMount } from 'svelte';
 
+import { viz, layers, shapes, intervals, Layer } from '@/stores/viz';
 import { loadData } from '@/stores/data';
-
-import {
-  viz,
-  selectLayer,
-  selectShape,
-  selectInterval,
-  intervals,
-  Layer,
-  Shape,
-} from '@/stores/viz';
-
-import IDWLayer from './components/idw-layer';
-import About from './components/about';
+import IDWLayer from '@/components/idw-layer';
+import Graph from '@/components/graph';
+import About from '@/components/about';
 
 import {
   AddOutline,
@@ -31,11 +22,7 @@ import {
 const centerLatitude = -22.94;
 const centerLongitude = -43.2;
 
-let map: L.Map;
 let mutationObserver: MutationObserver;
-let onZoom = () => {};
-let onMove = () => {};
-let onHide = (_hide: boolean) => {};
 
 let aboutOpen = false;
 
@@ -43,32 +30,30 @@ const colors = ['#d6ccc2', '#2a9d8f', '#e9c46a', '#e76f51'];
 let colorScale = d3.scaleThreshold<number, string>([10, 30, 70], colors);
 
 onMount(() => {
-  map = L.map('map', { zoomControl: false }).setView(
+  $viz.map = L.map('map', { zoomControl: false }).setView(
     [centerLatitude, centerLongitude],
     10,
   );
 
-  L.tileLayer(
-    'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
-    {
-      attribution:
-        '© <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a>, © <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a>, © <a href="https://www.openstreetmap.org/about" target="_blank">OpenStreetMap</a> contributors',
-    },
-  ).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution:
+      '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo($viz.map);
 
-  L.control.scale({ imperial: false }).addTo(map);
+  L.control.scale({ imperial: false }).addTo($viz.map);
 
-  map.on('zoomstart', () => {
-    onHide(true);
+  $viz.map.on('zoomstart', () => {
+    document.dispatchEvent(new Event('viz-map-hide'));
   });
 
-  map.on('zoomend', () => {
-    onZoom();
-    onHide(false);
+  $viz.map.on('zoomend', () => {
+    document.dispatchEvent(new Event('viz-map-zoom'));
+    document.dispatchEvent(new Event('viz-map-show'));
   });
 
   mutationObserver = new MutationObserver(() => {
-    onMove();
+    document.dispatchEvent(new Event('viz-map-drag'));
   });
 
   mutationObserver.observe(document.querySelector('.leaflet-map-pane')!, {
@@ -84,18 +69,20 @@ onDestroy(() => {
 });
 
 function onZoomIn() {
-  map.zoomIn();
+  $viz.map?.zoomIn();
 }
 
 function onZoomOut() {
-  map.zoomOut();
+  $viz.map?.zoomOut();
 }
 </script>
 
 <main>
   <div id="map">
+    <Graph />
+
     {#if $viz.selectedLayer == Layer.idw}
-      <IDWLayer {map} {colorScale} bind:onZoom bind:onMove bind:onHide />
+      <IDWLayer {colorScale} />
     {/if}
 
     <div id="legend">
@@ -133,10 +120,10 @@ function onZoomOut() {
           <LayersOutline />
 
           <ul class="selection-list">
-            {#each Object.values(Layer) as layer}
+            {#each layers as layer}
               <li
                 class:selected={$viz.selectedLayer == layer}
-                on:click={() => selectLayer(layer)}
+                on:click={() => ($viz.selectedLayer = layer)}
                 role="presentation"
               >
                 <CheckmarkCircleOutline />
@@ -150,10 +137,10 @@ function onZoomOut() {
           <ShapesOutline />
 
           <ul class="selection-list">
-            {#each Object.values(Shape) as shape}
+            {#each shapes as shape}
               <li
                 class:selected={$viz.selectedShape == shape}
-                on:click={() => selectShape(shape)}
+                on:click={() => ($viz.selectedShape = shape)}
                 role="presentation"
               >
                 <CheckmarkCircleOutline />
@@ -170,7 +157,7 @@ function onZoomOut() {
             {#each intervals as interval}
               <li
                 class:selected={$viz.selectedInterval == interval}
-                on:click={() => selectInterval(interval)}
+                on:click={() => ($viz.selectedInterval = interval)}
                 role="presentation"
               >
                 <CheckmarkCircleOutline />
