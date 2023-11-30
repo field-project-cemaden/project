@@ -11,17 +11,7 @@ $: canvas = d3.select(canvasEl);
 
 let size = onResize();
 
-$: graphData = $data.streetGraph
-  .filter(
-    (edge) =>
-      !(
-        isNaN(edge.start[0]) ||
-        isNaN(edge.start[1]) ||
-        isNaN(edge.end[0]) ||
-        isNaN(edge.end[1])
-      ),
-  )
-  .map((edge) => [edge.start, edge.end]);
+$: graphData = $data.streetGraph.map((edge) => [edge.start, edge.end]);
 
 $: gl = regl(canvasEl);
 
@@ -42,6 +32,10 @@ function computeTGraph() {
     }),
   );
 
+  // for (const row of tGraph) {
+  //   console.log(row[0][0], row[0][1], row[1][0], row[1][1])
+  // }
+
   positionBuffer.subdata(tGraph);
 }
 
@@ -52,8 +46,6 @@ function drawGraph() {
 
 $: if ($data.isLoaded && $viz.map && canvasEl) {
   canvas.attr('width', $size.width).attr('height', $size.height);
-
-  // positionBuffer =
 
   drawFn = gl({
     frag: `
@@ -91,7 +83,7 @@ $: if ($data.isLoaded && $viz.map && canvasEl) {
     },
 
     primitive: 'lines',
-    count: graphData.length,
+    count: graphData.length * 2,
   });
 
   computeTGraph();

@@ -17,7 +17,6 @@ export type AccumulatedData = Array<{
 }>;
 
 type StreetGraphData = Array<{
-  name: string;
   start: [number, number];
   end: [number, number];
 }>;
@@ -53,12 +52,15 @@ export async function loadData() {
       text
         .split('\n')
         .map((line) => line.split(';'))
-        .map(([name, startLat, startLon, endLat, endLon]) => ({
-          name: name,
+        .map(([startLat, startLon, endLat, endLon]) => ({
           start: [Number(startLat), Number(startLon)] as [number, number],
           end: [Number(endLat), Number(endLon)] as [number, number],
         })),
     );
+
+  console.log(
+    streetGraph.length,
+  );
 
   const boundary = await d3.json<GeoJSON>('/boundary.geojson');
   const regions = await d3.json<GeoJSON>('/regions.geojson');
