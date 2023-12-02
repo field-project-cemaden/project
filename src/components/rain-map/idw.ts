@@ -1,4 +1,5 @@
-// functions
+import { type Interpolator, type Point } from './interpolator';
+
 function distance(lat1: number, lat2: number, lon1: number, lon2: number) {
   /*
     Code copied from https://www.geeksforgeeks.org/program-distance-two-points-earth/
@@ -22,12 +23,7 @@ function distance(lat1: number, lat2: number, lon1: number, lon2: number) {
   return c * r;
 }
 
-export interface Point {
-  position: [number, number];
-  value: number;
-}
-
-export function invDist([lon1, lat1]: [number, number], points: Point[]) {
+function invDist([lon1, lat1]: [number, number], points: Point[]) {
   /*
     Returns the prediction for a new point
     using the known data.
@@ -38,6 +34,7 @@ export function invDist([lon1, lat1]: [number, number], points: Point[]) {
     row of the array is composed by 3 entries: latitude,
     longitude and measured value of the data point.
     */
+
   let ponderedSum = 0;
   let invDistSum = 0;
 
@@ -52,4 +49,12 @@ export function invDist([lon1, lat1]: [number, number], points: Point[]) {
   }
 
   return ponderedSum / invDistSum;
+}
+
+export class IDWInterpolator implements Interpolator {
+  constructor(public points: Point[]) {}
+
+  interpolate(coord: [number, number]): number {
+    return invDist(coord, this.points);
+  }
 }

@@ -3,12 +3,13 @@ import * as d3 from 'd3';
 import * as turf from '@turf/turf';
 import type { MultiPolygon } from 'geojson';
 
-import { viz, Shape } from '@/stores/viz';
+import { viz, Shape, Layer } from '@/stores/viz';
 import { data } from '@/stores/data';
 import { onEvent } from '@/utils/svelte';
 
-import { invDist } from './functions';
+import { IDWInterpolator } from './idw';
 import { transformCoord } from '@/utils/leaflet';
+import { KrigingInterpolator } from './kriging';
 
 export let colorScale: d3.ScaleThreshold<number, string>;
 
@@ -29,15 +30,15 @@ let shapeData = [] as {
 }[];
 
 $: if ($data.isLoaded) {
-  let shape;
+  const shape = {
+    [Shape.regions]: $data.regions,
+    [Shape.neighborhoods]: $data.neighborhoods,
+  }[$viz.selectedShape];
 
-  switch ($viz.selectedShape) {
-    case Shape.regions:
-      shape = $data.regions;
-      break;
-    case Shape.neighborhoods:
-      shape = $data.neighborhoods;
-  }
+  const interpolator = {
+    [Layer.idw]: new IDWInterpolator(accumulatedData),
+    [Layer.gp]: new KrigingInterpolator(accumulatedData),
+  }[$viz.selectedLayer];
 
   shapeData = shape!.features.map((features) => {
     let coords = features.geometry.coordinates;
@@ -47,12 +48,12 @@ $: if ($data.isLoaded) {
 
     return {
       features,
-      value: invDist(center as [number, number], accumulatedData),
+      value: interpolator.interpolate(center as [number, number]),
     };
   });
 }
 
-function drawHeatMap() {
+function drawRainMap() {
   const path = d3.geoPath().projection(
     d3.geoTransform({
       point: function (lon, lat) {
@@ -109,13 +110,13 @@ function translateG() {
     .attr('transform', `translate(${translate[0]}, ${translate[1]})`);
 }
 
-onEvent('viz-map-zoom', () => drawHeatMap());
+onEvent('viz-map-zoom', () => drawRainMap());
 onEvent('viz-map-drag', () => translateG());
 onEvent('viz-map-hide', () => svg.style('visibility', 'hidden'));
 onEvent('viz-map-show', () => svg.style('visibility', 'visible'));
 
 $: if ($data.isLoaded && svg && shapeData) {
-  drawHeatMap();
+  drawRainMap();
   translateG();
 }
 </script>

@@ -3,9 +3,9 @@ import * as d3 from 'd3';
 import * as L from 'leaflet';
 import { onDestroy, onMount } from 'svelte';
 
-import { viz, layers, shapes, intervals, Layer } from '@/stores/viz';
+import { viz, layers, shapes, intervals } from '@/stores/viz';
 import { loadData } from '@/stores/data';
-import IDWLayer from '@/components/idw-layer';
+import RainMap from '@/components/rain-map';
 import Graph from '@/components/graph';
 import About from '@/components/about';
 
@@ -27,7 +27,7 @@ let mutationObserver: MutationObserver;
 let aboutOpen = false;
 
 const colors = ['#d6ccc2', '#2a9d8f', '#e9c46a', '#e76f51'];
-let colorScale = d3.scaleThreshold<number, string>([10, 30, 70], colors);
+let colorScale = d3.scaleThreshold<number, string>([10e-1, 30e-1, 70e-1], colors);
 
 onMount(() => {
   $viz.map = L.map('map', { zoomControl: false }).setView(
@@ -81,9 +81,7 @@ function onZoomOut() {
   <div id="map">
     <Graph />
 
-    {#if $viz.selectedLayer == Layer.idw}
-      <IDWLayer {colorScale} />
-    {/if}
+    <RainMap {colorScale} />
 
     <div id="legend">
       <p>Precipitação<br />acumulada</p>

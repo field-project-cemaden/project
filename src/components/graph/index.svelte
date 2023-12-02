@@ -32,10 +32,6 @@ function computeTGraph() {
     }),
   );
 
-  // for (const row of tGraph) {
-  //   console.log(row[0][0], row[0][1], row[1][0], row[1][1])
-  // }
-
   positionBuffer.subdata(tGraph);
 }
 
