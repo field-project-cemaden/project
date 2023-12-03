@@ -1,5 +1,5 @@
 <script lang="ts">
-import { CloseOutline } from 'svelte-ionicons';
+import { IconX } from "@tabler/icons-svelte";
 
 export let open = false;
 
@@ -18,7 +18,7 @@ let selectedTab = 0;
         {/each}
         <li>
           <button on:click={() => (open = false)}>
-            <CloseOutline />
+            <IconX />
           </button>
         </li>
       </ul>

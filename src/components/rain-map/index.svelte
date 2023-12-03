@@ -3,26 +3,18 @@ import * as d3 from 'd3';
 import * as turf from '@turf/turf';
 import type { MultiPolygon } from 'geojson';
 
-import { viz, Shape, Layer } from '@/stores/viz';
+import { viz, interpolator, Shape } from '@/stores/viz';
 import { data } from '@/stores/data';
 import { onEvent } from '@/utils/svelte';
 
-import { IDWInterpolator } from './idw';
 import { transformCoord } from '@/utils/leaflet';
-import { KrigingInterpolator } from './kriging';
-
-export let colorScale: d3.ScaleThreshold<number, string>;
+import { colorScale } from '@/utils/viz';
 
 let svgEl: SVGSVGElement;
 $: svg = d3.select(svgEl);
 
 let tooltipEl: HTMLElement;
 $: tooltip = d3.select(tooltipEl);
-
-$: accumulatedData = $data.accumulated.map((row) => ({
-  position: [row.longitude, row.latitude] as [number, number],
-  value: row[`acc${$viz.selectedInterval}hr`],
-}));
 
 let shapeData = [] as {
   features: d3.ExtendedFeature<MultiPolygon>;
@@ -35,11 +27,6 @@ $: if ($data.isLoaded) {
     [Shape.neighborhoods]: $data.neighborhoods,
   }[$viz.selectedShape];
 
-  const interpolator = {
-    [Layer.idw]: new IDWInterpolator(accumulatedData),
-    [Layer.gp]: new KrigingInterpolator(accumulatedData),
-  }[$viz.selectedLayer];
-
   shapeData = shape!.features.map((features) => {
     let coords = features.geometry.coordinates;
     coords = typeof coords[0][0][0] === 'number' ? ([coords] as any) : coords;
@@ -48,7 +35,7 @@ $: if ($data.isLoaded) {
 
     return {
       features,
-      value: interpolator.interpolate(center as [number, number]),
+      value: $interpolator.interpolate(center as [number, number]),
     };
   });
 }

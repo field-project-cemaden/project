@@ -1,11 +1,21 @@
-import { writable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import { type Map } from 'leaflet';
+import { data } from '@/stores/data';
+import { IDWInterpolator } from './idw';
+import { KrigingInterpolator } from './kriging';
+import type { Interpolator } from './interpolator';
 
 export enum Layer {
-  idw = 'Inverse distance weighting (IDW)',
-  gp = 'Gaussian process (GP)',
+  shapes = 'Divisões',
+  graph = 'Grafo',
 }
 export const layers = Object.values(Layer);
+
+export enum Interpolation {
+  idw = 'Inverso da distância ponderada',
+  kriging = 'Krigagem',
+}
+export const interpolations = Object.values(Interpolation);
 
 export enum Shape {
   regions = 'Regiões admnistrativas',
@@ -18,15 +28,36 @@ export type Interval = (typeof intervals)[number];
 
 export interface VizStore {
   map?: Map;
-  selectedLayer: Layer;
+  selectedLayers: Record<Layer, boolean>;
+  selectedInterpolation: Interpolation;
   selectedShape: Shape;
   selectedInterval: Interval;
 }
 
 export const viz = writable<VizStore>({
   map: undefined,
-  selectedLayer: Layer.idw,
+  selectedLayers: {
+    [Layer.shapes]: true,
+    [Layer.graph]: false,
+  },
+  selectedInterpolation: Interpolation.idw,
   selectedShape: Shape.regions,
   selectedInterval: 1,
 });
 
+export const interpolator = derived(
+  [viz, data],
+  ([$viz, $data]): Interpolator => {
+    const rainDataForSelectedInterval = $data.rain.map((row) => ({
+      position: [row.longitude, row.latitude] as [number, number],
+      value: row[`acc${$viz.selectedInterval}hr`],
+    }));
+
+    switch ($viz.selectedInterpolation) {
+      case Interpolation.idw:
+        return new IDWInterpolator(rainDataForSelectedInterval);
+      case Interpolation.kriging:
+        return new KrigingInterpolator(rainDataForSelectedInterval);
+    }
+  },
+);

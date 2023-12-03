@@ -1,33 +1,38 @@
 <script lang="ts">
-import * as d3 from 'd3';
 import * as L from 'leaflet';
 import { onDestroy, onMount } from 'svelte';
 
-import { viz, layers, shapes, intervals } from '@/stores/viz';
+import {
+  viz,
+  interpolations,
+  shapes,
+  intervals,
+  layers,
+  Layer,
+} from '@/stores/viz';
 import { loadData } from '@/stores/data';
+import { colors } from '@/utils/viz';
 import RainMap from '@/components/rain-map';
 import Graph from '@/components/graph';
 import About from '@/components/about';
 
 import {
-  AddOutline,
-  RemoveOutline,
-  CheckmarkCircleOutline,
-  LayersOutline,
-  ShapesOutline,
-  TimeOutline,
-  InformationOutline,
-} from 'svelte-ionicons';
+  IconLassoPolygon,
+  IconEaseInOut,
+  IconBoxMultiple,
+  IconSelect,
+  IconClock,
+  IconZoomIn,
+  IconZoomOut,
+  IconInfoSquareRounded,
+} from '@tabler/icons-svelte';
 
 const centerLatitude = -22.94;
 const centerLongitude = -43.2;
 
 let mutationObserver: MutationObserver;
 
-let aboutOpen = false;
-
-const colors = ['#d6ccc2', '#2a9d8f', '#e9c46a', '#e76f51'];
-let colorScale = d3.scaleThreshold<number, string>([10e-1, 30e-1, 70e-1], colors);
+let showAbout = false;
 
 onMount(() => {
   $viz.map = L.map('map', { zoomControl: false }).setView(
@@ -79,9 +84,13 @@ function onZoomOut() {
 
 <main>
   <div id="map">
-    <Graph />
+    {#if $viz.selectedLayers[Layer.shapes]}
+      <RainMap />
+    {/if}
 
-    <RainMap {colorScale} />
+    {#if $viz.selectedLayers[Layer.graph]}
+      <Graph />
+    {/if}
 
     <div id="legend">
       <p>Precipitação<br />acumulada</p>
@@ -106,73 +115,95 @@ function onZoomOut() {
     <aside>
       <div class="button-group">
         <button on:click={onZoomIn}>
-          <AddOutline />
+          <IconZoomIn />
         </button>
         <button on:click={onZoomOut}>
-          <RemoveOutline />
+          <IconZoomOut />
         </button>
       </div>
 
       <div class="button-group">
         <button class="selection-button">
-          <LayersOutline />
+          <IconBoxMultiple />
 
           <ul class="selection-list">
             {#each layers as layer}
               <li
-                class:selected={$viz.selectedLayer == layer}
-                on:click={() => ($viz.selectedLayer = layer)}
+                class:selected={$viz.selectedLayers[layer]}
+                on:click={() =>
+                  ($viz.selectedLayers[layer] = !$viz.selectedLayers[layer])}
                 role="presentation"
               >
-                <CheckmarkCircleOutline />
+                <IconSelect />
                 <span>{layer}</span>
               </li>
             {/each}
           </ul>
         </button>
 
-        <button class="selection-button">
-          <ShapesOutline />
+        {#if $viz.selectedLayers[Layer.shapes]}
+          <button class="selection-button">
+            <IconLassoPolygon />
 
-          <ul class="selection-list">
-            {#each shapes as shape}
-              <li
-                class:selected={$viz.selectedShape == shape}
-                on:click={() => ($viz.selectedShape = shape)}
-                role="presentation"
-              >
-                <CheckmarkCircleOutline />
-                <span>{shape}</span>
-              </li>
-            {/each}
-          </ul>
-        </button>
+            <ul class="selection-list">
+              {#each shapes as shape}
+                <li
+                  class:selected={$viz.selectedShape == shape}
+                  on:click={() => ($viz.selectedShape = shape)}
+                  role="presentation"
+                >
+                  <IconSelect />
+                  <span>{shape}</span>
+                </li>
+              {/each}
+            </ul>
+          </button>
+        {/if}
 
-        <button class="selection-button">
-          <TimeOutline />
+        <div class="button-group">
+          <button class="selection-button">
+            <IconEaseInOut />
 
-          <ul class="selection-list">
-            {#each intervals as interval}
-              <li
-                class:selected={$viz.selectedInterval == interval}
-                on:click={() => ($viz.selectedInterval = interval)}
-                role="presentation"
-              >
-                <CheckmarkCircleOutline />
-                <span>Acumulado de {interval} horas</span>
-              </li>
-            {/each}
-          </ul>
-        </button>
+            <ul class="selection-list">
+              {#each interpolations as interpolation}
+                <li
+                  class:selected={$viz.selectedInterpolation == interpolation}
+                  on:click={() => ($viz.selectedInterpolation = interpolation)}
+                  role="presentation"
+                >
+                  <IconSelect />
+                  <span>{interpolation}</span>
+                </li>
+              {/each}
+            </ul>
+          </button>
 
-        <button class="selection-button" on:click={() => (aboutOpen = true)}>
-          <InformationOutline />
-        </button>
+          <button class="selection-button">
+            <IconClock />
+
+            <ul class="selection-list">
+              {#each intervals as interval}
+                <li
+                  class:selected={$viz.selectedInterval == interval}
+                  on:click={() => ($viz.selectedInterval = interval)}
+                  role="presentation"
+                >
+                  <IconSelect />
+                  <span>Acumulado de {interval} horas</span>
+                </li>
+              {/each}
+            </ul>
+          </button>
+
+          <button class="selection-button" on:click={() => (showAbout = true)}>
+            <IconInfoSquareRounded />
+          </button>
+        </div>
       </div>
     </aside>
   </div>
 
-  <About bind:open={aboutOpen} />
+  <About bind:open={showAbout} />
 </main>
 
 <style lang="scss">
