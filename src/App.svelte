@@ -37,7 +37,7 @@ let showAbout = false;
 onMount(() => {
   $viz.map = L.map('map', { zoomControl: false }).setView(
     [centerLatitude, centerLongitude],
-    10,
+    12,
   );
 
   L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {

@@ -1,11 +1,11 @@
 import { onMount, onDestroy } from 'svelte';
 import { writable } from 'svelte/store';
 
-export function onEvent(
-  type: string,
-  listener: EventListenerOrEventListenerObject,
+export function onEvent<K extends keyof DocumentEventMap>(
+  type: K,
+  listener: (this: Document, ev: DocumentEventMap[K]) => any,
 ) {
-  onMount(() => document.addEventListener(type, listener));
+  onMount(() => document.addEventListener<K>(type, listener));
   onDestroy(() => document.removeEventListener(type, listener));
 }
 
