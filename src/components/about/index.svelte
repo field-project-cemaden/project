@@ -11,6 +11,11 @@ enum Tab {
 }
 
 let selectedTab = Tab.about;
+
+function changeTab(tab: Tab) {
+    selectedTab = tab;
+};
+
 </script>
 
 <dialog id="about" {open}>
@@ -60,9 +65,10 @@ let selectedTab = Tab.about;
         tipo de usuário, desde leigos até especialista em meteorologia. As
         funcionalidades implementadas incluem a escolha do método de
         interpolação utilizado (mais informações podem ser encontradas na seção
-        <a href="#TabInterpolation">Interpolação</a>), a segmentação do mapa do
-        Rio de Janeiro em regiões administrativas ou bairros, e a seleção do
-        intervalo de tempo desejado para a exibição dos acumulados de chuva.
+        <b aria-hidden="true" id="IterpolationTabButton" on:click={() => changeTab(Tab.interpolation)}>Interpolação</b>),
+        a segmentação do mapa do Rio de Janeiro em regiões administrativas ou
+        bairros, e a seleção do intervalo de tempo desejado para a exibição dos
+        acumulados de chuva.
       </p>
 
       <p>
@@ -70,7 +76,7 @@ let selectedTab = Tab.about;
         município, juntamente com métricas de interesse que descrevem, por
         exemplo, a "importância" de cada trecho de rua ou avenida para a região
         administrativa à qual ele pertence (mais detalhes sobre isso podem ser
-        acessados na seção <a href="#TabGraph">Grafo</a>).
+        acessados na seção <b aria-hidden="true" id="GraphTabButton" on:click={() => changeTab(Tab.graph)}>Grafo</b>).
       </p>
     </div>
 
@@ -155,6 +161,11 @@ let selectedTab = Tab.about;
 </dialog>
 
 <style lang="scss">
+    b {
+        cursor: pointer;
+        color: #606c38;
+    }
+
 dialog {
   visibility: hidden;
   position: absolute;
