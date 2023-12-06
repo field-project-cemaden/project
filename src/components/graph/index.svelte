@@ -9,6 +9,7 @@ import { data } from '@/stores/data';
 import { onEvent, onResize } from '@/utils/svelte';
 import { transformCoord, transformLayerPoint } from '@/utils/leaflet';
 import { colorScale } from '@/utils/viz';
+import { onMount } from 'svelte';
 
 const FLOAT_BYTES = 4;
 
@@ -40,12 +41,6 @@ $: edgeColorBuffer = gl.buffer({
 });
 
 let selectedNodes = [] as [number, number][];
-$: selectedNodeBuffer = gl.buffer({
-  length: FLOAT_BYTES * 4,
-  type: 'float',
-  usage: 'dynamic',
-});
-
 let dijkstraPath: number[][] = [];
 let dijkstraPositionBuffer: regl.Buffer;
 
@@ -81,15 +76,6 @@ function getGraphOffset() {
   offset = [rect.x / $size.width, rect.y / $size.height];
 }
 
-function computeSelectedNodeBuffer() {
-  selectedNodeBuffer = gl.buffer(
-    selectedNodes.map((node) => {
-      const point = transformCoord(node!);
-      return [point[0] / $size.width, point[1] / $size.height];
-    }),
-  );
-}
-
 function computeDijkstraPath() {
   if (selectedNodes.length === 2) {
     const rawPath = dijkstra.bidirectional(
@@ -99,11 +85,12 @@ function computeDijkstraPath() {
       (_, attrs) => {
         const s = attrs['start'];
         const e = attrs['end'];
+        const v = $interpolator.interpolate([
+          (s[0] + e[0]) / 2,
+          (s[1] + e[1]) / 2,
+        ]);
 
-        return (
-          $interpolator.interpolate([(s[0] + e[0]) / 2, (s[1] + e[1]) / 2]) *
-          attrs['length']
-        );
+        return (v + 0.01) * attrs['length'];
       },
     );
 
@@ -140,7 +127,14 @@ function drawGraph() {
 
   gl.clear({ color: [0, 0, 0, 0], depth: 1 });
 
-  drawHoveredNodeFn({ position: selectedNodeBuffer, offset });
+  drawHoveredNodeFn({
+    position: selectedNodes.map((node) => {
+      const point = transformCoord(node!);
+      return [point[0] / $size.width, point[1] / $size.height];
+    }),
+    count: selectedNodes.length,
+    offset,
+  });
 
   if (dijkstraPath.length > 0) {
     drawDijkstraPathFn({
@@ -248,7 +242,7 @@ $: if ($data.isLoaded && $viz.map && canvasEl) {
     },
 
     primitive: 'points',
-    count: 2,
+    count: gl.prop('count'),
   });
 
   drawDijkstraPathFn = gl({
@@ -295,6 +289,8 @@ $: if ($data.isLoaded && $viz.map && canvasEl) {
 
   computeTGraph();
   getGraphOffset();
+  computeDijkstraPath();
+  computeDijkstraPathBuffer();
   drawGraph();
 }
 
@@ -303,7 +299,6 @@ onEvent('viz-map-show', () => canvas.style('visibility', 'visible'));
 
 onEvent('viz-map-zoom', () => {
   computeTGraph();
-  computeSelectedNodeBuffer();
   computeDijkstraPathBuffer();
   drawGraph();
 });
@@ -316,31 +311,32 @@ onEvent('viz-map-drag', () => {
 let startX = 0;
 let startY = 0;
 
-onEvent('mousedown', (e) => {
-  startX = e.pageX;
-  startY = e.pageY;
-});
+onMount(() => {
+  canvasEl.addEventListener('mousedown', (e) => {
+    startX = e.pageX;
+    startY = e.pageY;
+  });
 
-onEvent('mouseup', (e) => {
-  if (Math.abs(e.pageX - startX) > 5 || Math.abs(e.pageY - startY) > 5) {
-    return;
-  }
+  canvasEl.addEventListener('mouseup', (e) => {
+    if (Math.abs(e.pageX - startX) > 5 || Math.abs(e.pageY - startY) > 5) {
+      return;
+    }
 
-  const coord = transformLayerPoint([e.pageX, e.pageY]);
-  const nearestCoord = turf
-    .nearestPoint(turf.point(coord.toReversed()), nodes)
-    .geometry.coordinates.toReversed() as [number, number];
+    const coord = transformLayerPoint([e.pageX, e.pageY]);
+    const nearestCoord = turf
+      .nearestPoint(turf.point(coord.toReversed()), nodes)
+      .geometry.coordinates.toReversed() as [number, number];
 
-  if (selectedNodes.length < 2) {
-    selectedNodes.push(nearestCoord);
-  } else {
-    selectedNodes = [nearestCoord];
-  }
+    if (selectedNodes.length < 2) {
+      selectedNodes.push(nearestCoord);
+    } else {
+      selectedNodes = [nearestCoord];
+    }
 
-  computeSelectedNodeBuffer();
-  computeDijkstraPath();
-  computeDijkstraPathBuffer();
-  drawGraph();
+    computeDijkstraPath();
+    computeDijkstraPathBuffer();
+    drawGraph();
+  });
 });
 </script>
 

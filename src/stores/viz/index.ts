@@ -50,7 +50,7 @@ export const interpolator = derived(
   ([$viz, $data]): Interpolator => {
     const rainDataForSelectedInterval = $data.rain.map((row) => ({
       position: [row.longitude, row.latitude] as [number, number],
-      value: row[`acc${$viz.selectedInterval}hr`],
+      value: Math.max(0, row[`acc${$viz.selectedInterval}hr`]),
     }));
 
     switch ($viz.selectedInterpolation) {

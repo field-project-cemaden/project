@@ -91,117 +91,122 @@ function onZoomOut() {
     {#if $viz.selectedLayers[Layer.graph]}
       <Graph />
     {/if}
+  </div>
 
-    <div id="legend">
-      <p>Precipitação<br />acumulada</p>
-      <div class="legend-info">
-        <div class="legend-info-color" style="background-color: {colors[0]}" />
-        <p class="legend-info-name">0 - 10 mm</p>
-      </div>
-      <div class="legend-info">
-        <div class="legend-info-color" style="background-color: {colors[1]}" />
-        <p class="legend-info-name">10 - 30 mm</p>
-      </div>
-      <div class="legend-info">
-        <div class="legend-info-color" style="background-color: {colors[2]}" />
-        <p class="legend-info-name">30 - 70 mm</p>
-      </div>
-      <div class="legend-info">
-        <div class="legend-info-color" style="background-color: {colors[3]}" />
-        <p class="legend-info-name">&ge; 70 mm</p>
-      </div>
+  <aside id="buttons">
+    <div class="button-group">
+      <button on:click={onZoomIn}>
+        <IconZoomIn />
+      </button>
+      <button on:click={onZoomOut}>
+        <IconZoomOut />
+      </button>
     </div>
 
-    <aside>
-      <div class="button-group">
-        <button on:click={onZoomIn}>
-          <IconZoomIn />
-        </button>
-        <button on:click={onZoomOut}>
-          <IconZoomOut />
-        </button>
-      </div>
+    <div class="button-group">
+      <button class="selection-button">
+        <IconBoxMultiple />
 
-      <div class="button-group">
+        <ul class="selection-list">
+          {#each layers as layer}
+            <li
+              class:selected={$viz.selectedLayers[layer]}
+              on:click={() =>
+                ($viz.selectedLayers[layer] = !$viz.selectedLayers[layer])}
+              role="presentation"
+            >
+              <IconSelect />
+              <span>{layer}</span>
+            </li>
+          {/each}
+        </ul>
+      </button>
+
+      {#if $viz.selectedLayers[Layer.shapes]}
         <button class="selection-button">
-          <IconBoxMultiple />
+          <IconLassoPolygon />
 
           <ul class="selection-list">
-            {#each layers as layer}
+            {#each shapes as shape}
               <li
-                class:selected={$viz.selectedLayers[layer]}
-                on:click={() =>
-                  ($viz.selectedLayers[layer] = !$viz.selectedLayers[layer])}
+                class:selected={$viz.selectedShape == shape}
+                on:click={() => ($viz.selectedShape = shape)}
                 role="presentation"
               >
                 <IconSelect />
-                <span>{layer}</span>
+                <span>{shape}</span>
+              </li>
+            {/each}
+          </ul>
+        </button>
+      {/if}
+
+      <div class="button-group">
+        <button class="selection-button">
+          <IconEaseInOut />
+
+          <ul class="selection-list">
+            {#each interpolations as interpolation}
+              <li
+                class:selected={$viz.selectedInterpolation == interpolation}
+                on:click={() => ($viz.selectedInterpolation = interpolation)}
+                role="presentation"
+              >
+                <IconSelect />
+                <span>{interpolation}</span>
               </li>
             {/each}
           </ul>
         </button>
 
-        {#if $viz.selectedLayers[Layer.shapes]}
-          <button class="selection-button">
-            <IconLassoPolygon />
+        <button class="selection-button">
+          <IconClock />
 
-            <ul class="selection-list">
-              {#each shapes as shape}
-                <li
-                  class:selected={$viz.selectedShape == shape}
-                  on:click={() => ($viz.selectedShape = shape)}
-                  role="presentation"
-                >
-                  <IconSelect />
-                  <span>{shape}</span>
-                </li>
-              {/each}
-            </ul>
-          </button>
-        {/if}
+          <ul class="selection-list">
+            {#each intervals as interval}
+              <li
+                class:selected={$viz.selectedInterval == interval}
+                on:click={() => ($viz.selectedInterval = interval)}
+                role="presentation"
+              >
+                <IconSelect />
+                <span>Acumulado de {interval} horas</span>
+              </li>
+            {/each}
+          </ul>
+        </button>
 
-        <div class="button-group">
-          <button class="selection-button">
-            <IconEaseInOut />
-
-            <ul class="selection-list">
-              {#each interpolations as interpolation}
-                <li
-                  class:selected={$viz.selectedInterpolation == interpolation}
-                  on:click={() => ($viz.selectedInterpolation = interpolation)}
-                  role="presentation"
-                >
-                  <IconSelect />
-                  <span>{interpolation}</span>
-                </li>
-              {/each}
-            </ul>
-          </button>
-
-          <button class="selection-button">
-            <IconClock />
-
-            <ul class="selection-list">
-              {#each intervals as interval}
-                <li
-                  class:selected={$viz.selectedInterval == interval}
-                  on:click={() => ($viz.selectedInterval = interval)}
-                  role="presentation"
-                >
-                  <IconSelect />
-                  <span>Acumulado de {interval} horas</span>
-                </li>
-              {/each}
-            </ul>
-          </button>
-
-          <button class="selection-button" on:click={() => (showAbout = true)}>
-            <IconInfoSquareRounded />
-          </button>
-        </div>
+        <button class="selection-button" on:click={() => (showAbout = true)}>
+          <IconInfoSquareRounded />
+        </button>
       </div>
-    </aside>
-  </div>
+    </div>
+  </aside>
+
+  <aside id="info-box">
+    <img src="/figs/logo_sem_legenda.png" alt="Logo" />
+
+    <hr style="margin-top: 0.25rem" />
+
+    <p>Precipitação ({$viz.selectedInterval}h)</p>
+
+    <div class="legend-info">
+      <div class="legend-info-color" style="background-color: {colors[0]}" />
+      <p class="legend-info-name">0 - 10 mm</p>
+    </div>
+    <div class="legend-info">
+      <div class="legend-info-color" style="background-color: {colors[1]}" />
+      <p class="legend-info-name">10 - 30 mm</p>
+    </div>
+    <div class="legend-info">
+      <div class="legend-info-color" style="background-color: {colors[2]}" />
+      <p class="legend-info-name">30 - 70 mm</p>
+    </div>
+    <div class="legend-info">
+      <div class="legend-info-color" style="background-color: {colors[3]}" />
+      <p class="legend-info-name">&ge; 70 mm</p>
+    </div>
+  </aside>
 
   <About bind:open={showAbout} />
 </main>
@@ -220,23 +225,34 @@ main {
     user-select: none;
   }
 
-  #legend {
+  #info-box {
     position: absolute;
     z-index: 10000;
     right: 1rem;
-    bottom: 2rem;
+    top: 1rem;
+
+    width: 12rem;
 
     background-color: white;
+    background-color: rgba(255,255,255,0.8);
+    padding-bottom: 1rem;
+    backdrop-filter: blur(10px);
     padding: 0.5rem 1rem;
     border-radius: var(--border-radius);
 
-    display: flex;
-    flex-direction: column;
+    hr {
+      border-color: #28361844;
+      margin: 1rem 0;
+    }
+
+    > img {
+      padding: 0.5rem 0 0;
+    }
 
     > p {
       color: black;
-      margin-bottom: 0.5rem;
-      font-weight: bold;
+      margin: 0.5rem 0;
+      font-weight: 500;
     }
 
     .legend-info {
@@ -259,7 +275,7 @@ main {
     }
   }
 
-  aside {
+  #buttons {
     position: absolute;
     z-index: 10000;
 
