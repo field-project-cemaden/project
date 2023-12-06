@@ -30,7 +30,7 @@ let selectedTab = Tab.about;
       </ul>
     </nav>
 
-    <div class="tab" hidden={selectedTab !== Tab.about}>
+    <div class="tab" id="TabAbout" hidden={selectedTab !== Tab.about}>
       <p>
         Desenvolvida por estudantes da graduação em Ciência de Dados da
         <a href="https://emap.fgv.br">FGV/EMAp</a> em parceria com o
@@ -60,7 +60,7 @@ let selectedTab = Tab.about;
         tipo de usuário, desde leigos até especialista em meteorologia. As
         funcionalidades implementadas incluem a escolha do método de
         interpolação utilizado (mais informações podem ser encontradas na seção
-        [Interpolação][link pra pular pra essa seção]), a segmentação do mapa do
+        <a href="#TabInterpolation">Interpolação</a>), a segmentação do mapa do
         Rio de Janeiro em regiões administrativas ou bairros, e a seleção do
         intervalo de tempo desejado para a exibição dos acumulados de chuva.
       </p>
@@ -69,13 +69,12 @@ let selectedTab = Tab.about;
         Existe ainda a possibilidade de exibir o grafo da rede viária do
         município, juntamente com métricas de interesse que descrevem, por
         exemplo, a "importância" de cada trecho de rua ou avenida para a região
-        administrativa à qual ele pertence [VER SE VAI FICAR ASSIM MESMO] (mais
-        detalhes sobre isso podem ser acessados na seção [Grafo viário][link pra
-        seção]).
+        administrativa à qual ele pertence (mais detalhes sobre isso podem ser
+        acessados na seção <a href="#TabGraph">Grafo</a>).
       </p>
     </div>
 
-    <div class="tab" hidden={selectedTab !== Tab.graph}>
+    <div class="tab" id="TabGraph" hidden={selectedTab !== Tab.graph}>
       <p>
         Em termos simples, um grafo $G$ é um objeto matemático que consiste em
         um par de conjuntos $V$ e $E$, ou seja, $G = (V,E)$, onde os elementos
@@ -107,7 +106,7 @@ let selectedTab = Tab.about;
       </p>
     </div>
 
-    <div class="tab" hidden={selectedTab !== Tab.interpolation}>
+    <div class="tab" id="TabInterpolation" hidden={selectedTab !== Tab.interpolation}>
       <p>
         A plataforma ChoveuRIO incorpora dois modelos de interpolação distintos:
         IDW e Krigagem. Essa abordagem diversificada permite aos usuários
@@ -138,11 +137,19 @@ let selectedTab = Tab.about;
         avançado de interpolação baseado em um processo gaussiano regido por
         covariâncias prévias. Este método oferece uma abordagem sofisticada para
         previsões espaciais, garantindo a melhor previsão linear não viesada
-        (BLUP) em locais não amostrados. Com suposições adequadas sobre a
+        (BLUE) em locais não amostrados. Com suposições adequadas sobre a
         covariância prévia, a Krigagem destaca-se como uma ferramenta eficaz
         para a interpretação precisa das condições pluviométricas em áreas não
         diretamente observadas.
       </p>
+    </div>
+    <div class="tab" id="TabAuthors" hidden={selectedTab !== Tab.authors}>
+        <ul>
+            <li>Amanda Perez</li>
+            <li>Juan Belieni</li>
+            <li>Eduardo Adame</li>
+            <li>Kayo Yokoyama</li>
+        </ul>
     </div>
   </div>
 </dialog>
